@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Anak Emak Addon</title>
+<link href="https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&family=Nunito:wght@400;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f3ead8;--panel:#fffaf0;--ink:#2b1d12;--mute:#6f5b48;--grass:#4c9a2a;--grass-d:#356f1c;--dirt:#8a5a34;--line:#2b1d12;--chip:#e6d6b8}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#1d1610;--panel:#2a2018;--ink:#f5e9d4;--mute:#b9a58a;--grass:#6cc244;--grass-d:#4c9a2a;--dirt:#b07a4a;--line:#000;--chip:#3a2d21}}
+:root[data-theme="dark"]{--bg:#1d1610;--panel:#2a2018;--ink:#f5e9d4;--mute:#b9a58a;--grass:#6cc244;--grass-d:#4c9a2a;--dirt:#b07a4a;--line:#000;--chip:#3a2d21}
+*{box-sizing:border-box}
+:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:Nunito,system-ui,sans-serif;line-height:1.5}
+.wrap{max-width:1040px;margin:0 auto;padding:0 18px}
+header{background:var(--grass);border-bottom:6px solid var(--dirt)}
+.bar{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 0}
+.logo{font-family:Silkscreen,monospace;font-weight:700;font-size:20px;color:#fff;text-shadow:3px 3px 0 var(--grass-d)}
+button,select,input,textarea{font-family:Nunito,sans-serif}
+.btn{font-weight:800;font-size:14px;background:var(--panel);color:var(--ink);border:3px solid var(--line);padding:8px 14px;cursor:pointer}
+.btn.go{background:var(--grass);color:#fff}
+.btn.del{background:#c0432e;color:#fff}
+.btn:focus-visible,.chip:focus-visible{outline:3px solid var(--dirt);outline-offset:2px}
+.hero{padding:26px 0 34px;color:#fff}
+.hero h1{font-family:Silkscreen,monospace;font-size:clamp(26px,6vw,46px);line-height:1.1;margin:0 0 10px;text-shadow:4px 4px 0 var(--grass-d)}
+.hero p{margin:0 0 18px;font-weight:700;max-width:520px}
+.search{display:flex;max-width:520px;border:4px solid var(--line);background:var(--panel)}
+.search input{flex:1;min-width:0;border:0;padding:12px 14px;font-weight:700;font-size:16px;background:transparent;color:var(--ink);outline:none}
+.admin{background:var(--panel);border:4px solid var(--line);box-shadow:6px 6px 0 var(--line);margin:24px 0;padding:18px}
+.admin h2{font-family:Silkscreen,monospace;font-size:16px;margin:0 0 12px}
+.form{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.form label{display:flex;flex-direction:column;gap:4px;font-weight:800;font-size:13px}
+.form .full{grid-column:1/-1}
+.form input,.form select,.form textarea{border:3px solid var(--line);background:var(--bg);color:var(--ink);padding:9px;font-size:15px;font-weight:600;width:100%}
+.form textarea{min-height:84px;resize:vertical}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.msg{font-weight:700;font-size:14px;color:var(--mute)}
+.filters{display:flex;flex-wrap:wrap;gap:8px;margin:22px 0 8px}
+.chip{font-weight:700;font-size:14px;background:var(--chip);color:var(--ink);border:3px solid var(--line);padding:6px 14px;cursor:pointer}
+.chip[aria-pressed="true"]{background:var(--grass);color:#fff}
+.count{color:var(--mute);font-weight:700;margin:0 0 14px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:18px;padding-bottom:40px}
+.card{background:var(--panel);border:4px solid var(--line);box-shadow:6px 6px 0 var(--line);display:flex;flex-direction:column}
+.thumb{height:130px;border-bottom:4px solid var(--line);background:var(--chip) center/cover no-repeat;display:grid;place-items:center;font-size:44px}
+.body{padding:14px;display:flex;flex-direction:column;gap:6px;flex:1}
+.body h3{font-family:Silkscreen,monospace;font-size:15px;margin:0;word-break:break-word}
+.body p{margin:0;color:var(--mute);font-size:14px;flex:1;white-space:pre-line}
+.tag{align-self:flex-start;background:var(--chip);border:2px solid var(--line);padding:0 8px;font-size:13px;font-weight:800}
+.stat{display:flex;align-items:center;gap:6px;font-weight:800;font-size:14px;color:var(--mute)}
+.stat svg{width:16px;height:16px;fill:none;stroke:var(--grass-d);stroke-width:2.5}
+.card .btn{margin-top:6px;text-align:center;text-decoration:none;display:block}
+.empty{grid-column:1/-1;text-align:center;padding:40px 0;color:var(--mute);font-weight:700}
+footer{padding:18px 0 30px;text-align:center;font-size:13px;color:var(--mute)}
+@media(max-width:560px){.form{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <div class="bar">
+      <div class="logo">ANAK EMAK ADDON</div>
+      <button class="btn" id="theme">Tema</button>
+    </div>
+    <div class="hero">
+      <h1>Addon Minecraft, pilihan anak emak.</h1>
+      <p>Cari addon, skin pack, template, dan mcpack untuk Minecraft Bedrock.</p>
+      <label class="search"><input id="q" type="search" placeholder="Cari nama atau deskripsi"></label>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="admin" id="admin" hidden>
+    <h2 id="formTitle">Panel admin: tambah addon</h2>
+    <div class="form">
+      <label>Nama addon<input id="fName" maxlength="80"></label>
+      <label>Tipe
+        <select id="fType"><option>addon</option><option>skinpack</option><option>mctemplate</option><option>mcpack</option></select>
+      </label>
+      <label class="full">Link unduh<input id="fLink" type="url" placeholder="https://..."></label>
+      <label class="full">Gambar<input id="fImg" type="file" accept="image/*"></label>
+      <label class="full">Deskripsi<textarea id="fDesc" maxlength="500"></textarea></label>
+    </div>
+    <div class="row" style="margin-top:14px">
+      <button class="btn go" id="save">Simpan addon</button>
+      <button class="btn" id="cancel" hidden>Batal edit</button>
+      <span class="msg" id="msg"></span>
+    </div>
+  </section>
+
+  <div class="filters" id="filters" role="group" aria-label="Tipe"></div>
+  <div class="row" style="justify-content:space-between;margin-bottom:14px"><p class="count" id="count" style="margin:0">Memuat data...</p><label class="msg">Urutkan <select id="sort" class="btn"><option value="new">Terbaru</option><option value="pop">Terpopuler</option></select></label></div>
+  <div class="grid" id="grid"></div>
+</main>
+<footer>© 2026 Anak Emak Addon. Bukan produk resmi Mojang atau Microsoft.</footer>
+
+<script>
+const TYPES=["Semua","addon","skinpack","mctemplate","mcpack"];
+const ICON={addon:"🧩",skinpack:"🧑",mctemplate:"🗺️",mcpack:"📦"};
+const $=id=>document.getElementById(id);
+let db=null,assets=null,isAdmin=false,items=[],filter="Semua",editing=null,note="";
+
+function el(tag,props,...kids){const e=document.createElement(tag);Object.assign(e,props||{});kids.forEach(k=>e.append(k));return e}
+function setMsg(t){$("msg").textContent=t}
+function safeUrl(u){try{const x=new URL(u);return /^https?:$/.test(x.protocol)?x.href:null}catch(e){return null}}
+
+function chips(){
+  $("filters").replaceChildren(...TYPES.map(t=>{const b=el("button",{className:"chip",textContent:t==="Semua"?t:t});b.setAttribute("aria-pressed",String(t===filter));b.onclick=()=>{filter=t;chips();render()};return b}));
+}
+function fmt(n){n=n||0;return n>=1000?(n/1000).toLocaleString("id-ID",{maximumFractionDigits:1})+" rb":String(n)}
+function stat(i){
+  const ns="http://www.w3.org/2000/svg",svg=document.createElementNS(ns,"svg");
+  svg.setAttribute("viewBox","0 0 24 24");svg.setAttribute("aria-hidden","true");
+  const p=document.createElementNS(ns,"path");p.setAttribute("d","M12 3v12m0 0l-5-5m5 5l5-5M4 20h16");p.setAttribute("stroke-linecap","round");p.setAttribute("stroke-linejoin","round");svg.append(p);
+  const d=el("div",{className:"stat"});d.append(svg,el("span",{textContent:fmt(i.downloads)+" unduhan"}));return d;
+}
+const counted=new Set();
+async function countDownload(i){
+  if(!db||counted.has(i.id))return;
+  counted.add(i.id);
+  try{await db.doc("addons/"+i.id).update({downloads:(i.downloads||0)+1})}catch(e){}
+}
+function render(){
+  const q=$("q").value.trim().toLowerCase();
+  const r=items.filter(i=>(filter==="Semua"||i.type===filter)&&((i.name||"")+" "+(i.desc||"")).toLowerCase().includes(q)).sort($("sort").value==="pop"?(a,b)=>(b.downloads||0)-(a.downloads||0):(a,b)=>(b.createdAt||0)-(a.createdAt||0));
+  $("count").textContent=note||(r.length+" item ditemukan");
+  const g=$("grid");
+  if(!r.length){g.replaceChildren(el("div",{className:"empty",textContent:isAdmin?"Belum ada addon. Tambah lewat panel admin di atas.":"Belum ada addon yang cocok."}));return}
+  g.replaceChildren(...r.map(i=>{
+    const th=el("div",{className:"thumb"});
+    if(i.imageId){th.style.backgroundImage=`url("/_blob/${encodeURIComponent(i.imageId)}")`}else{th.textContent=ICON[i.type]||"📦"}
+    const body=el("div",{className:"body"},el("h3",{textContent:i.name||"Tanpa nama"}),el("span",{className:"tag",textContent:i.type}),el("p",{textContent:i.desc||""}),stat(i));
+    const href=safeUrl(i.link);
+    body.append(href?el("a",{className:"btn go",textContent:"Unduh",href,target:"_blank",rel:"noopener noreferrer",onclick:()=>countDownload(i)}):el("span",{className:"msg",textContent:"Link belum tersedia"}));
+    if(isAdmin){
+      const row=el("div",{className:"row"});
+      const e=el("button",{className:"btn",textContent:"Edit"});e.onclick=()=>startEdit(i);
+      const d=el("button",{className:"btn del",textContent:"Hapus"});d.onclick=()=>remove(i);
+      row.append(e,d);body.append(row);
+    }
+    return el("article",{className:"card"},th,body);
+  }));
+}
+function startEdit(i){
+  editing=i;$("fName").value=i.name||"";$("fType").value=i.type||"addon";$("fLink").value=i.link||"";$("fDesc").value=i.desc||"";$("fImg").value="";
+  $("formTitle").textContent="Panel admin: edit addon";$("cancel").hidden=false;setMsg("Gambar dikosongkan = tetap pakai gambar lama.");
+  $("admin").scrollIntoView({behavior:"smooth"});
+}
+function resetForm(){
+  editing=null;["fName","fLink","fDesc","fImg"].forEach(id=>$(id).value="");$("fType").value="addon";
+  $("formTitle").textContent="Panel admin: tambah addon";$("cancel").hidden=true;
+}
+async function save(){
+  const name=$("fName").value.trim(),link=$("fLink").value.trim(),desc=$("fDesc").value.trim(),type=$("fType").value,file=$("fImg").files[0];
+  if(!name){setMsg("Nama addon wajib diisi.");return}
+  if(!safeUrl(link)){setMsg("Link unduh harus diawali http:// atau https://");return}
+  if(!db){setMsg("Database belum aktif, data tidak bisa disimpan.");return}
+  $("save").disabled=true;setMsg("Menyimpan...");
+  try{
+    let imageId=editing?editing.imageId||null:null;
+    if(file){
+      if(!assets){setMsg("Upload gambar belum tersedia.");$("save").disabled=false;return}
+      const up=await assets.upload(file);imageId=up.id;
+    }
+    const id=editing?editing.id:"a"+Date.now().toString(36);
+    await db.doc("addons/"+id).set({name,type,link,desc,imageId,createdAt:editing?editing.createdAt||Date.now():Date.now(),downloads:editing?editing.downloads||0:0});
+    resetForm();setMsg("Tersimpan.");
+  }catch(e){setMsg("Gagal menyimpan: "+(e&&e.message||"coba lagi"))}
+  $("save").disabled=false;
+}
+async function remove(i){
+  if(!confirm('Hapus "'+i.name+'"?'))return;
+  try{await db.doc("addons/"+i.id).delete()}catch(e){alert("Gagal menghapus: "+(e&&e.message||""))}
+}
+$("save").onclick=save;
+$("cancel").onclick=()=>{resetForm();setMsg("")};
+$("q").oninput=render;$("sort").onchange=render;
+$("theme").onclick=()=>{const d=document.documentElement,dk=matchMedia("(prefers-color-scheme:dark)").matches;d.dataset.theme=(d.dataset.theme||(dk?"dark":"light"))==="dark"?"light":"dark"};
+
+chips();render();
+(async()=>{
+  try{
+    db=await claude.use("db");assets=await claude.use("assets");
+    const u=await claude.use("user");isAdmin=u?await u.canEdit():false;
+    $("admin").hidden=!isAdmin;
+    if(!db){note="Database belum aktif, katalog tidak bisa dimuat.";render();return}
+    note="";
+    db.collection("addons").onSnapshot(s=>{items=s.docs.map(d=>({id:d.id,...d.data()}));render()},e=>{note="Gagal memuat data: "+e.message;render()});
+  }catch(e){note="Gagal memuat data.";render()}
+})();
+</script>
+</body>
+</html>
