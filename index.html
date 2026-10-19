@@ -60,6 +60,7 @@ h2.sec{font-size:17px;margin:30px 0 14px}
 .cape:hover{outline:3px solid var(--ghi)}
 .cimg{position:relative;background:var(--bg);border:3px solid #000;display:grid;place-items:center;padding:8px 0;margin-bottom:4px}.cimg img{height:170px;width:auto;display:block}
 .stk{position:absolute;right:6px;top:6px;background:rgba(0,0,0,.78);color:#fff;padding:0 8px;font:700 12px system-ui,sans-serif}.stk.out{background:#a5362a}.so img{filter:grayscale(1);opacity:.6}.so .price{color:var(--mute)}.prod .btn:disabled{cursor:not-allowed}div.cape{cursor:default}
+.form summary{cursor:pointer;font-weight:800;font-size:13px}
 .perks{padding:16px 18px;margin:0;list-style:none;display:flex;flex-direction:column;gap:6px;font-weight:700}
 .perks li::before{content:"+ ";color:var(--grass);font-weight:800}
 .sold{display:inline-block;padding:8px 14px;font-weight:800;margin-bottom:6px}
@@ -138,6 +139,8 @@ footer button{background:none;border:0;color:inherit;text-decoration:underline;c
     <div class="row" style="justify-content:space-between;margin-bottom:12px"><h2 style="margin:0">Panel admin</h2><button class="btn" id="out" type="button">Keluar</button></div>
     <div class="form" id="form">
       <label class="f">Link marketplace addon<span class="row" style="flex-wrap:nowrap"><input id="src" type="url" placeholder="https://..."><button class="btn go" id="fetchBtn" type="button" style="white-space:nowrap">Ambil data</button></span></label>
+      <label class="f">URL proxy pribadi (opsional, Cloudflare Worker, contoh: https://nama.akun.workers.dev/?url={url})<input id="px"></label>
+      <details class="f"><summary>Gagal ambil otomatis? Tempel kode sumber halaman</summary><label style="margin-top:8px">Buka halaman addon, tekan Ctrl+U, lalu Ctrl+A, Ctrl+C, dan tempel di sini<textarea id="srcHtml"></textarea></label><button class="btn" id="parseBtn" type="button" style="margin-top:8px">Baca dari kode sumber</button></details>
       <label>Nama<input id="name"></label>
       <label>Tipe<select id="type"><option>addon</option><option>skinpack</option><option>mctemplate</option><option>mcpack</option></select></label>
       <label class="f">Link gambar<input id="image" type="url"></label>
@@ -311,7 +314,7 @@ $("lgo").onclick=async()=>{
 };
 $("out").onclick=()=>{token="";localStorage.removeItem("ae_tok");sessionStorage.removeItem("ae_tok");$("panel").hidden=true};
 function openPanel(){
-  $("panel").hidden=false;$("tpl").value=localStorage.getItem("ae_tpl")||"";alist();
+  $("panel").hidden=false;$("px").value=localStorage.getItem("ae_px")||"";$("tpl").value=localStorage.getItem("ae_tpl")||"";alist();
   $("sSold").value=shop.sold||0;
   $("stockBox").replaceChildren(...[...PRODUCTS.map(p=>[p[2],p[0]]),...CAPES.map(c=>[c[2],c[0]])].map(([k,n])=>{const v=(shop.stock||{})[k];return el("label",{textContent:n},el("input",{type:"number",min:"0",id:"st-"+k,value:v===undefined||v===null?"":v}))}));
   $("sTesti").value=(shop.testimonials||[]).map(x=>[x.name,x.product||"",x.text].join(" | ")).join("\n");
@@ -327,14 +330,19 @@ function clearForm(){editId=null;["src","name","image","desc","dl","safe"].forEa
 $("reset").onclick=clearForm;
 
 const PROXIES=[u=>"https://api.allorigins.win/raw?url="+encodeURIComponent(u),u=>"https://corsproxy.io/?url="+encodeURIComponent(u),u=>"https://api.codetabs.com/v1/proxy?quest="+encodeURIComponent(u)];
-async function meta(url){
-  let html="";
-  for(const p of PROXIES){try{const r=await fetch(p(url));if(r.ok){html=await r.text();if(html.length>200)break}}catch(e){}}
-  if(!html)throw new Error("Halaman tidak bisa diambil. Isi data secara manual.");
+function parseMeta(html,url){
   const d=new DOMParser().parseFromString(html,"text/html");
   const m=k=>{const e=d.querySelector(`meta[property="${k}"],meta[name="${k}"]`);return e?(e.content||"").trim():""};
-  let img=m("og:image")||m("twitter:image");try{if(img)img=new URL(img,url).href}catch(e){}
+  let img=m("og:image")||m("twitter:image");try{if(img)img=new URL(img,url||location.href).href}catch(e){}
   return{name:m("og:title")||(d.title||"").trim(),description:m("og:description")||m("description"),image:img};
+}
+async function meta(url){
+  const px=($("px").value||"").trim();if(px)localStorage.setItem("ae_px",px);
+  const list=[...(px?[u=>px.includes("{url}")?px.replace("{url}",encodeURIComponent(u)):px+(px.includes("?")?"&":"?")+"url="+encodeURIComponent(u)]:[]),...PROXIES];
+  for(const p of list){
+    try{const r=await fetch(p(url));if(!r.ok)continue;const x=parseMeta(await r.text(),url);if(x.name&&(x.image||x.description))return x}catch(e){}
+  }
+  throw new Error("Halaman tidak bisa diambil (situs memblokir proxy). Pakai proxy pribadi, atau tempel kode sumber halaman.");
 }
 const guess=t=>/skin/i.test(t)?"skinpack":/template|world|map/i.test(t)?"mctemplate":/mcpack/i.test(t)?"mcpack":"addon";
 $("fetchBtn").onclick=async()=>{
@@ -342,6 +350,12 @@ $("fetchBtn").onclick=async()=>{
   say("Mengambil data...");$("fetchBtn").disabled=true;
   try{const m=await meta(u);$("name").value=m.name;$("desc").value=m.description;$("image").value=m.image;$("type").value=guess(m.name+" "+m.description+" "+u);say(m.image?"Data terisi. Cek lalu isi link download.":"Data terisi, tapi gambar tidak ditemukan.")}
   catch(e){say(e.message)}$("fetchBtn").disabled=false;
+};
+$("parseBtn").onclick=()=>{
+  const t=$("srcHtml").value;if(t.length<200)return say("Tempel kode sumber halaman dulu.");
+  const m=parseMeta(t,safeUrl($("src").value.trim()));
+  if(!m.name&&!m.image)return say("Data tidak ditemukan di kode sumber itu.");
+  $("name").value=m.name;$("desc").value=m.description;$("image").value=m.image;$("type").value=guess(m.name+" "+m.description+" "+$("src").value);say("Data terisi dari kode sumber. Cek lalu isi link download.");
 };
 async function makeSafe(dl,tpl){
   const u=tpl.replace("{url}",encodeURIComponent(dl));
