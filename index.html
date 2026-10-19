@@ -50,7 +50,7 @@ button,input,select,textarea{font-family:inherit}
 .more-wrap{text-align:center;padding-bottom:36px}
 h2.sec{font-size:17px;margin:30px 0 14px}
 .prods{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:22px}
-.prod{display:flex;flex-direction:column}.pimg{aspect-ratio:16/10;border-bottom:4px solid #000;background:var(--bg)}.pimg img{width:100%;height:100%;object-fit:cover;display:block}.pbody{padding:16px;display:flex;flex-direction:column;gap:10px;flex:1}
+.prod{display:flex;flex-direction:column}.pimg{position:relative;aspect-ratio:16/10;border-bottom:4px solid #000;background:var(--bg)}.pimg img{width:100%;height:100%;object-fit:cover;display:block}.pbody{padding:16px;display:flex;flex-direction:column;gap:10px;flex:1}
 .prod h3{margin:0;font-size:14px;line-height:1.4}
 .price{font:700 22px Silkscreen,monospace;color:var(--grass)}
 [data-theme=dark] .price{color:var(--ghi)}
@@ -58,7 +58,8 @@ h2.sec{font-size:17px;margin:30px 0 14px}
 .capes{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:20px}
 .cape{padding:12px;display:flex;flex-direction:column;gap:6px;text-decoration:none;color:var(--ink);font-weight:800;font-size:14px}
 .cape:hover{outline:3px solid var(--ghi)}
-.cimg{background:var(--bg);border:3px solid #000;display:grid;place-items:center;padding:8px 0;margin-bottom:4px}.cimg img{height:170px;width:auto;display:block}
+.cimg{position:relative;background:var(--bg);border:3px solid #000;display:grid;place-items:center;padding:8px 0;margin-bottom:4px}.cimg img{height:170px;width:auto;display:block}
+.stk{position:absolute;right:6px;top:6px;background:rgba(0,0,0,.78);color:#fff;padding:0 8px;font:700 12px system-ui,sans-serif}.stk.out{background:#a5362a}.so img{filter:grayscale(1);opacity:.6}.so .price{color:var(--mute)}.prod .btn:disabled{cursor:not-allowed}div.cape{cursor:default}
 .perks{padding:16px 18px;margin:0;list-style:none;display:flex;flex-direction:column;gap:6px;font-weight:700}
 .perks li::before{content:"+ ";color:var(--grass);font-weight:800}
 .sold{display:inline-block;padding:8px 14px;font-weight:800;margin-bottom:6px}
@@ -150,6 +151,8 @@ footer button{background:none;border:0;color:inherit;text-decoration:underline;c
     <h2 style="margin:24px 0 12px">Data toko (isi dengan data pembelian asli)</h2>
     <div class="form">
       <label class="f">Jumlah terjual<input id="sSold" type="number" min="0"></label>
+      <div class="f msg">Stok per produk dan cape (kosongkan = stok tidak ditampilkan, 0 = SOLD OUT)</div>
+      <div class="form f" id="stockBox"></div>
       <label class="f">Testimoni, satu per baris: Nama | Produk | Isi testimoni<textarea id="sTesti"></textarea></label>
       <label class="f">Pembelian untuk popup, satu per baris: Nama | Produk<textarea id="sBuy"></textarea></label>
       <div class="f row"><button class="btn go" id="saveShop" type="button">Simpan data toko</button><span class="msg" id="smsg"></span></div>
@@ -222,11 +225,24 @@ $("moreBtn").onclick=()=>{shown+=PAGE;render()};
 $("q").oninput=()=>{shown=PAGE;if(location.hash==="#produk")location.hash="addon";render()};
 
 /* produk */
-const buy=()=>el("a",{className:"btn go",textContent:"Beli di Discord",href:DISCORD,target:"_blank",rel:"noopener noreferrer"});
-$("prods").replaceChildren(...PRODUCTS.map(p=>el("div",{className:"prod pnl"},el("div",{className:"pimg"},el("img",{src:IMG[p[2]],alt:p[0],loading:"lazy",width:640,height:400})),el("div",{className:"pbody"},el("h3",{textContent:p[0]}),el("div",{className:"price",textContent:p[1]}),buy()))));
-$("capes").replaceChildren(...CAPES.map(c=>{const im=el("div",{className:"cimg"},el("img",{src:IMG[c[2]],alt:c[0],loading:"lazy",width:114,height:240}));return el("a",{className:"cape pnl",href:DISCORD,target:"_blank",rel:"noopener noreferrer"},im,c[0],el("span",{className:"price",style:"font-size:16px",textContent:rp(c[1])}))}));
+const stk=k=>{const v=(shop.stock||{})[k];return v===undefined||v===null||v===""?null:+v};
+const stockTag=k=>{const v=stk(k);return v===null?null:el("span",{className:"stk"+(v<=0?" out":""),textContent:v<=0?"SOLD OUT":"Stok: "+v+" unit"})};
+const buy=k=>{const v=stk(k);return v!==null&&v<=0?el("button",{className:"btn",type:"button",textContent:"Sold out",disabled:true}):el("a",{className:"btn go",textContent:"Beli di Discord",href:DISCORD,target:"_blank",rel:"noopener noreferrer"})};
+function renderProducts(){
+  $("prods").replaceChildren(...PRODUCTS.map(p=>{
+    const pi=el("div",{className:"pimg"},el("img",{src:IMG[p[2]],alt:p[0],loading:"lazy",width:640,height:400}));const t=stockTag(p[2]);if(t)pi.append(t);
+    return el("div",{className:"prod pnl"+(stk(p[2])===0?" so":"")},pi,el("div",{className:"pbody"},el("h3",{textContent:p[0]}),el("div",{className:"price",textContent:p[1]}),buy(p[2])));
+  }));
+  $("capes").replaceChildren(...CAPES.map(c=>{
+    const im=el("div",{className:"cimg"},el("img",{src:IMG[c[2]],alt:c[0],loading:"lazy",width:114,height:240}));const t=stockTag(c[2]);if(t)im.append(t);
+    const out=stk(c[2])===0,p=out?{}:{href:DISCORD,target:"_blank",rel:"noopener noreferrer"};
+    return el(out?"div":"a",{className:"cape pnl"+(out?" so":""),...p},im,c[0],el("span",{className:"price",style:"font-size:16px",textContent:rp(c[1])}));
+  }));
+}
+renderProducts();
 $("perks").replaceChildren(...PERKS.map(t=>el("li",{textContent:t})));
 function renderShop(){
+  renderProducts();
   const n=+shop.sold||0;$("soldWrap").hidden=!n;$("sold").textContent="Jumlah terjual: "+n.toLocaleString("id-ID");
   const t=shop.testimonials||[];
   $("signs").replaceChildren(...(t.length?t.map(x=>el("div",{className:"sign"},x.text,el("b",{textContent:x.name}),el("small",{textContent:x.product||""}))):[el("div",{className:"msg",textContent:"Testimoni pembeli akan tampil di sini."})]));
@@ -297,6 +313,7 @@ $("out").onclick=()=>{token="";localStorage.removeItem("ae_tok");sessionStorage.
 function openPanel(){
   $("panel").hidden=false;$("tpl").value=localStorage.getItem("ae_tpl")||"";alist();
   $("sSold").value=shop.sold||0;
+  $("stockBox").replaceChildren(...[...PRODUCTS.map(p=>[p[2],p[0]]),...CAPES.map(c=>[c[2],c[0]])].map(([k,n])=>{const v=(shop.stock||{})[k];return el("label",{textContent:n},el("input",{type:"number",min:"0",id:"st-"+k,value:v===undefined||v===null?"":v}))}));
   $("sTesti").value=(shop.testimonials||[]).map(x=>[x.name,x.product||"",x.text].join(" | ")).join("\n");
   $("sBuy").value=(shop.buyers||[]).map(x=>x.name+" | "+x.product).join("\n");
 }
@@ -356,7 +373,8 @@ $("save").onclick=async()=>{
 };
 $("saveShop").onclick=async()=>{
   const lines=id=>$(id).value.split("\n").map(s=>s.split("|").map(x=>x.trim())).filter(a=>a[0]);
-  const out={sold:Math.max(0,parseInt($("sSold").value)||0),
+  const stock={};[...PRODUCTS.map(p=>p[2]),...CAPES.map(c=>c[2])].forEach(k=>{const v=$("st-"+k).value.trim();if(v!=="")stock[k]=Math.max(0,parseInt(v)||0)});
+  const out={stock,sold:Math.max(0,parseInt($("sSold").value)||0),
     testimonials:lines("sTesti").filter(a=>a[2]).map(a=>({name:a[0],product:a[1],text:a.slice(2).join(" | ")})),
     buyers:lines("sBuy").filter(a=>a[1]).map(a=>({name:a[0],product:a[1]}))};
   $("saveShop").disabled=true;$("smsg").textContent="Menyimpan...";
