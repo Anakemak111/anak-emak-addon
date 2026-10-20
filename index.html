@@ -226,6 +226,8 @@ footer button{background:none;border:0;color:inherit;text-decoration:underline;c
     <div class="row" style="justify-content:space-between;margin-bottom:12px"><h2 style="margin:0">Panel admin</h2><button class="btn" id="out" type="button">Keluar</button></div>
     <div class="form" id="form">
       <label class="f">Link marketplace addon<span class="row" style="flex-wrap:nowrap"><input id="src" type="url" placeholder="https://..."><button class="btn go" id="fetchBtn" type="button" style="white-space:nowrap">Ambil data</button></span></label>
+      <label class="f">Atau tempel source code halaman marketplace (Ctrl+U, Ctrl+A, Ctrl+C lalu tempel di sini)<textarea id="srcHtml" placeholder="Tempel source code halaman di sini..." style="min-height:90px;font-family:ui-monospace,monospace;font-size:12px"></textarea></label>
+      <div class="f row"><button class="btn go" id="parseBtn" type="button">Isi form dari source</button><button class="btn" id="clearSrcBtn" type="button">Hapus source</button></div>
       <label>Nama<input id="name"></label>
       <label>Tipe<select id="type"><option>addon</option><option>skinpack</option><option>mctemplate</option><option>mcpack</option></select></label>
       <label class="f">Link gambar<input id="image" type="url"></label>
@@ -395,18 +397,24 @@ function alist(){
     el("button",{className:"btn del",type:"button",textContent:"Hapus",onclick:async()=>{if(!confirm("Hapus "+i.name+"?"))return;say("Menghapus...");try{await mutate(l=>l.filter(x=>x.id!==i.id),"Hapus "+i.name);say("Terhapus.");alist();render()}catch(e){say(e.message)}}})
   )));
 }
-function clearForm(){editId=null;["src","name","image","desc","dl","safe"].forEach(k=>$(k).value="");$("type").value="addon";say("")}
+function clearForm(){editId=null;["src","srcHtml","name","image","desc","dl","safe"].forEach(k=>$(k).value="");$("type").value="addon";say("")}
 $("reset").onclick=clearForm;
 
 const PROXIES=[u=>"https://api.allorigins.win/raw?url="+encodeURIComponent(u),u=>"https://corsproxy.io/?url="+encodeURIComponent(u),u=>"https://api.codetabs.com/v1/proxy?quest="+encodeURIComponent(u)];
+function parseMeta(html,url){
+  const d=new DOMParser().parseFromString(html,"text/html");
+  const m=k=>{const e=d.querySelector(`meta[property="${k}"],meta[name="${k}"]`);return e?(e.content||"").trim():""};
+  const canon=(d.querySelector("link[rel=canonical]")||{}).href||"";
+  const base=url||m("og:url")||canon||"";
+  let img=m("og:image")||m("twitter:image");
+  try{if(img&&base)img=new URL(img,base).href}catch(e){}
+  return{name:m("og:title")||m("twitter:title")||(d.title||"").trim(),description:m("og:description")||m("twitter:description")||m("description"),image:img,url:m("og:url")||canon};
+}
 async function meta(url){
   let html="";
   for(const p of PROXIES){try{const r=await fetch(p(url));if(r.ok){html=await r.text();if(html.length>200)break}}catch(e){}}
-  if(!html)throw new Error("Halaman tidak bisa diambil. Isi data secara manual.");
-  const d=new DOMParser().parseFromString(html,"text/html");
-  const m=k=>{const e=d.querySelector(`meta[property="${k}"],meta[name="${k}"]`);return e?(e.content||"").trim():""};
-  let img=m("og:image")||m("twitter:image");try{if(img)img=new URL(img,url).href}catch(e){}
-  return{name:m("og:title")||(d.title||"").trim(),description:m("og:description")||m("description"),image:img};
+  if(!html)throw new Error("Halaman tidak bisa diambil. Tempel source code halaman di kolom bawahnya, atau isi manual.");
+  return parseMeta(html,url);
 }
 const guess=t=>/skin/i.test(t)?"skinpack":/template|world|map/i.test(t)?"mctemplate":/mcpack/i.test(t)?"mcpack":"addon";
 $("fetchBtn").onclick=async()=>{
@@ -420,6 +428,17 @@ async function makeSafe(dl,tpl){
   for(const f of [x=>x,...PROXIES]){try{const r=await fetch(f(u));if(!r.ok)continue;let t=(await r.text()).trim();try{const j=JSON.parse(t);t=j.shortenedUrl||j.short_url||j.url||t}catch(e){}const x=safeUrl(t);if(x)return x}catch(e){}}
   throw new Error("Gagal membuat safelink (API atau CORS). Buat manual di dashboard shortener lalu tempel di kolom safelink.");
 }
+$("parseBtn").onclick=()=>{
+  const html=$("srcHtml").value.trim();
+  if(html.length<50)return say("Tempel source code halaman dulu.");
+  const m=parseMeta(html,safeUrl($("src").value.trim())||"");
+  if(!m.name&&!m.description&&!m.image)return say("Data tidak ditemukan. Pastikan yang ditempel hasil Ctrl+U dari halaman addon.");
+  $("name").value=m.name;$("desc").value=m.description;$("image").value=m.image;
+  if(!$("src").value.trim()&&safeUrl(m.url))$("src").value=m.url;
+  $("type").value=guess(m.name+" "+m.description+" "+$("src").value);
+  say(m.image?"Form terisi dari source. Cek lalu isi link download.":"Form terisi, tapi gambar tidak ditemukan. Isi link gambar manual.");
+};
+$("clearSrcBtn").onclick=()=>{$("srcHtml").value="";say("")};
 $("safeBtn").onclick=async()=>{
   const dl=safeUrl($("dl").value.trim()),tpl=$("tpl").value.trim();
   if(!dl)return say("Isi link download asli dulu.");
